@@ -180,12 +180,21 @@ Every helper tolerates `null`/`undefined` and returns `"—"` — call sites MUS
 display ternary. Requests carry parsed values (`parseMoneyInput`, `toApiDate`), never the
 display string.
 
-### Routes — always `paths.*`
+### Routes — always from `@/routes`
 
 ```ts
-navigate(paths.PRODUCT_DETAIL.replace(":id", String(id)));  // ✅
-navigate(`/product/${id}`);                                  // ❌
+import paths, { to, PUBLIC_PATHS } from "@/routes";
+
+navigate(paths.PRODUCT);                    // ✅ static
+navigate(to.productDetail(id));             // ✅ parameterised — compiler-checked
+navigate(paths.PRODUCT_DETAIL.replace(":id", String(id)));  // ❌ not type-checked
+navigate(`/product/${id}`);                 // ❌
 ```
+
+`paths` holds the PATTERNS (`Routes.tsx` registers them). `to` holds the BUILDERS
+(everything that navigates). Builders are derived from the patterns — `buildPath` reads the
+param names out of the pattern at the type level, so a wrong or missing key is a compile
+error. Add a builder for every parameterised route you add.
 
 ### Language — always `useCurrentLanguage()`
 
@@ -328,6 +337,7 @@ const columns = [
 **Practice**
 
 - **Never** hardcode a URL path, a hex colour, or a UI string
+- **Never** build a route with `paths.X.replace(":id", …)` — use `to.*`
 - **Never** hand-roll a list table, a pagination footer, or `Modal.confirm`
 - **Never** write `handleSetPage = useCallback((p) => setPage(p), [setPage])` — pass `setPage`
   (a wrapper with real conditional logic is fine)
@@ -360,7 +370,7 @@ npm run dev         # Vite dev server
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
 npm run build       # production build
-node scripts/audit.mjs   # 12 architecture checks — exits 1 on any violation
+node scripts/audit.mjs   # 13 architecture checks — exits 1 on any violation
 ```
 
 **The verification gate — all four, every task, before saying it is done:**

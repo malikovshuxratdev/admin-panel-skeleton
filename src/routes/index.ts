@@ -1,6 +1,6 @@
 // Public surface of `src/routes`.
-// Import this folder, never a file inside it:
-//   import { X } from "@/routes";
+//   import paths, { to, PUBLIC_PATHS } from "@/routes";
 
+export { default } from "@/routes/path";
+export * from "@/routes/path";
 export * from "@/routes/Routes";
-export { default as paths } from "@/routes/path";

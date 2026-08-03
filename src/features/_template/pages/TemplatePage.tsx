@@ -13,7 +13,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { paths } from "@/routes";
+import { to } from "@/routes";
 import { DataTable, TableHeaderText, TableText, TableActions } from "@/shared/table";
 import { confirmDelete, getNameByLanguage } from "@/shared/helpers";
 import { usePaginatedParams } from "@/shared/hooks";
@@ -35,7 +35,7 @@ const TemplatePage: React.FC = () => {
   const { mutate: remove } = useTemplateDeleteMutation();
 
   const view = (row: TemplateItem) =>
-    navigate(paths.TEMPLATE_DETAIL.replace(":id", String(row.id)));
+    navigate(to.templateDetail(row.id));
 
   const handleDelete = (row: TemplateItem) =>
     confirmDelete({
@@ -60,7 +60,7 @@ const TemplatePage: React.FC = () => {
       render: (_: unknown, r: TemplateItem) => (
         <TableActions
           onView={() => view(r)}
-          onEdit={() => navigate(paths.TEMPLATE_UPDATE.replace(":id", String(r.id)))}
+          onEdit={() => navigate(to.templateUpdate(r.id))}
           onDelete={() => handleDelete(r)}
         />
       ),

@@ -223,6 +223,24 @@ check(12, "A file importing its own folder's barrel", () => {
   return bad;
 });
 
+
+/* 13 ─ a route built by hand instead of through to.* --------------------- */
+check(13, "Route built with .replace() instead of a to.* builder", () => {
+  const bad = [];
+  for (const f of code) {
+    if (f.startsWith("src/routes/")) continue;
+    read(f).split("\n").forEach((line, i) => {
+      if (/paths\.\w+\s*\.replace\s*\(/.test(line)) {
+        bad.push(`${f}:${i + 1}: use to.* from @/routes — .replace() is not type-checked`);
+      }
+      if (/["'`]:\w+["'`]/.test(line) && /replace/.test(line)) {
+        bad.push(`${f}:${i + 1}: a route param filled by hand`);
+      }
+    });
+  }
+  return bad;
+});
+
 /* ─────────────────────────────────────────────────────────────────────────── */
 let failed = 0;
 console.log("");

@@ -217,6 +217,28 @@ Three consequences worth stating explicitly:
 
 ---
 
+## 5a. Routes: one list, two surfaces
+
+`routes/path.ts` exports a PATTERN map (`paths`) and a BUILDER map (`to`). The router
+registers patterns; everything that navigates calls builders.
+
+They are not two lists — the builders are written in terms of the patterns, and
+`buildPath` extracts the parameter names from the pattern string *at the type level*. A
+wrong key, a missing key, or params passed to a static path are all compile errors.
+
+The alternative — `paths.X.replace(":id", String(id))` at each call site — type-checks
+whatever you hand it. Rename `:id` to `:productId` in the pattern and every call site still
+compiles, still runs, and produces `/product/:productId`. That failure has no stack trace
+and no error; it surfaces as a user hitting a 404.
+
+`PUBLIC_PATHS` exists for the same reason: the set of session-free screens is one list the
+guard reads, not a condition repeated in each layout that can disagree with itself.
+
+Backend endpoints stay in each feature's `api/urls`. Site routes and API endpoints change
+for different reasons and must never share a list.
+
+---
+
 ## 6. `sections/` is the only sub-folder inside `pages/`
 
 Not `parts/`, not `blocks/`, not `fragments/`. A section is a page-sized chunk of exactly one

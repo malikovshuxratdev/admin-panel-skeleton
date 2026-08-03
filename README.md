@@ -12,7 +12,7 @@ not argued.
 - `README.md` — this file. The full reference.
 - `ARCHITECTURE.md` — *why* the rules exist. The authority when documents disagree.
 - `CLAUDE.md` — the agent's operating contract: workflow, recipes, verification gate.
-- `scripts/audit.mjs` — 12 checks. The enforcement.
+- `scripts/audit.mjs` — 13 checks. The enforcement.
 
 Terminology used throughout:
 
@@ -49,7 +49,7 @@ src/shared/ui/TableFooter.tsx           + EmptyState
 src/layout/admin-layout/AdminLayout.tsx
 src/routes/path.ts · Routes.tsx
 index.ts in every module folder      absolute @/ paths
-scripts/audit.mjs                    12 architecture checks, no dependencies
+scripts/audit.mjs                    13 architecture checks, no dependencies
 ```
 
 **The feature template** — `src/features/_template/`. Copy the folder, rename every
@@ -218,14 +218,17 @@ here, and nothing may import `app/`.
 **MUST**
 
 - Declare every path in `path.ts` as a constant.
-- Reference paths as `paths.X` everywhere in the codebase.
+- Reference static paths as `paths.X`, and parameterised ones as `to.x(id)`.
+- List every session-free route in `PUBLIC_PATHS`, so the auth guard has one source.
 - Use `lazy(() => import("@/features/x/pages/XPage"))` for route targets.
 
 **MUST NOT**
 
-- Write a literal path anywhere outside `path.ts` —
-  `navigate("/product/" + id)` is forbidden; use
-  `navigate(paths.PRODUCT_DETAIL.replace(":id", String(id)))`.
+- Write a literal path anywhere outside `path.ts` — `navigate("/product/" + id)` is
+  forbidden.
+- Build a parameterised URL by hand. `paths.X.replace(":id", …)` is **not type-checked**:
+  rename the pattern's `:id` and every call site keeps compiling while producing a broken
+  URL. Use `to.productDetail(id)` — see §3.2a.
 - Deep-import anything other than a feature's `pages/` module.
 - Put role checks on individual routes — group them under a guarded layout instead.
 
@@ -239,6 +242,37 @@ const TemplatePage = lazy(() => import("@/features/_template/pages/TemplatePage"
 Going through `@/features/_template` here would place that feature's entire public surface
 — every hook, type and component the barrel re-exports — inside the lazy chunk, defeating
 code splitting for every route at once.
+
+---
+
+### 3.2a `routes/path.ts` — Patterns and Builders
+
+Two surfaces, and they are not the same thing:
+
+| Export  | Is                          | Read by                          |
+| ------- | --------------------------- | -------------------------------- |
+| `paths` | the PATTERN `/product/:id`  | `Routes.tsx`, when registering   |
+| `to`    | the BUILDER `to.productDetail(7)` → `/product/7` | everything that navigates |
+
+**Builders are derived from the patterns, never written twice.** `buildPath` reads the
+parameter names out of the pattern *at the type level*, so this is a compile error:
+
+```ts
+buildPath(paths.PRODUCT_DETAIL, { wrongKey: 5 })  // ✗ 'wrongKey' is not assignable
+buildPath(paths.PRODUCT_DETAIL, {})               // ✗ 'id' is missing
+buildPath(paths.PRODUCT, { id: 1 })               // ✗ a static path takes no params
+buildPath(paths.PRODUCT_DETAIL, { id: 5 })        // ✓
+```
+
+That is the whole reason the builders exist. `.replace(":id", String(id))` compiles
+whatever you give it: rename the pattern and every call site keeps compiling while quietly
+producing `/product/:productId`. Nobody finds it until a user does.
+
+**`PUBLIC_PATHS`** lists the routes reachable without a session. The auth guard reads it,
+so "which screens are public?" has one answer instead of a condition repeated per layout.
+
+**Backend endpoints are a different namespace.** They live in each feature's `api/` module
+under its own `urls` object, and change for different reasons. Never mix the two lists.
 
 ---
 
@@ -929,7 +963,7 @@ Never duplicate server data into Redux "for convenience". Two sources of truth d
 12. layout/navItems.ts          — add the sidebar entry + its role filter
 13. public/locales/{uz,ru,en}   — add every key, in all three languages
 14. npm run typecheck && npm run lint && npm run build
-15. Run the §7 audit — all six checks must print `clean`
+15. Run `node scripts/audit.mjs` — all 13 checks must pass
 ```
 
 ### 6.2 Adding a page to an existing feature
@@ -966,7 +1000,7 @@ node scripts/audit.mjs
 ```
 
 It exits `0` when everything passes and `1` on any violation, printing the offending file
-and line. It has no dependencies.
+and line. It has no dependencies. 13 checks.
 
 ### The verification gate
 
@@ -992,6 +1026,7 @@ npm run typecheck && npm run lint && node scripts/audit.mjs && npm run build
 | 10 | `Type`-suffixed files in `types/`  | §3.6                                                |
 | 11 | Hardcoded route strings            | §3.2 — `paths.*`                                    |
 | 12 | A file importing its own barrel    | §3.10 — that is a cycle                             |
+| 13 | Route built with `.replace()`      | §3.2a — use a `to.*` builder                        |
 
 **Check 7 matters more than it looks.** Fonts, icons and images are referenced from `.css`
 `url()` and from `index.html`, neither of which the TypeScript compiler reads. A move that
@@ -1043,7 +1078,7 @@ dead component usually orphans two more. Two traps:
 2. Every import is absolute (`@/…`) and addresses a **folder**, never a file inside it.
 3. Barrels themselves use absolute `@/` paths.
 4. Every cross-feature import goes through `@/features/<domain>`.
-5. Every path is a `paths.*` constant.
+5. Every path comes from `@/routes`: `paths.*` for static, `to.*(id)` for parameterised.
 
 **Reuse**
 
@@ -1072,7 +1107,7 @@ dead component usually orphans two more. Two traps:
 18. Every language read uses `useCurrentLanguage()`.
 19. Every `VITE_*` variable is declared in `.env.example`.
 20. `npm run typecheck` passes before every commit.
-21. All six §7 audit checks print `clean` before every merge.
+21. All 13 audit checks pass before every merge.
 22. The dead-export pass runs before every release — barrels hide dead code, so nothing
     else will catch it.
 
