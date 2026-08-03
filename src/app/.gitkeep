@@ -1,0 +1,1 @@
+# Composition root: main.tsx, App.tsx, i18n.ts, store.ts, index.css. Providers only — no business logic.
